@@ -1,0 +1,7 @@
+Adafruit CircuitPython 9.2.8 on 2025-05-28; Waveshare RP2350-Zero with rp2350
+Board ID:waveshare_rp2350_zero
+UID:70178202D2E5CC71
+boot.py output:
+Traceback (most recent call last):
+  File "boot.py", line 17, in <module>
+TypeError: unexpected keyword argument 'serial_number'

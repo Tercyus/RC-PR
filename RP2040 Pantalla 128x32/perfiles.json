@@ -1,0 +1,42 @@
+[
+  {
+    "nombre": "Default",
+    "ajuste_x": 0,
+    "ajuste_y": 5,
+    "variacion": 0.3,
+    "color": [0, 0, 255],
+    "imagen": "/default.bmp"
+  },
+  {
+    "nombre": "sniper",
+    "ajuste_x": 0,
+    "ajuste_y": 10,
+    "variacion": 0.1,
+    "color": [255, 0, 0],
+    "imagen": "/sniper.bmp"
+  },
+  {
+    "nombre": "smg",
+    "ajuste_x": 1,
+    "ajuste_y": 3,
+    "variacion": 0.4,
+    "color": [0, 255, 0],
+    "imagen": "/smg.bmp"
+  },
+  {
+    "nombre": "Ar",
+    "ajuste_x": -1,
+    "ajuste_y": 6,
+    "variacion": 0.2,
+    "color": [0, 255, 255],
+    "imagen": "/ar.bmp"
+  },
+  {
+    "nombre": "Pistol",
+    "ajuste_x": 2,
+    "ajuste_y": 4,
+    "variacion": 0.35,
+    "color": [255, 0, 255],
+    "imagen": "/pistola.bmp"
+  }
+]
