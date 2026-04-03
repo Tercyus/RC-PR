@@ -23,7 +23,7 @@ Dispositivo de compensación de recoil para juegos FPS basado en **Raspberry Pi 
 
 | Carpeta | Pantalla | Menú físico |
 |---|---|---|
-| `Completo y Final/` | SSD1306 128×32 | No |
+| `RP2040 Pantalla 128x32/` | SSD1306 128×32 | No |
 | `RP2040 Pantalla 128x64/` | SSD1306 128×64 | Sí — navegar y editar perfiles con botones |
 
 ---
