@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recoil Compensator</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0f0f0f; color: #e0e0e0; min-height: 100vh; }
+
+  header {
+    background: #1a1a2e;
+    border-bottom: 2px solid #00d4ff;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  header h1 { font-size: 1.4rem; color: #00d4ff; letter-spacing: 2px; text-transform: uppercase; }
+  #estado-badge {
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    background: #333;
+    color: #aaa;
+  }
+  #estado-badge.conectado { background: #0d3b0d; color: #4cff4c; border: 1px solid #4cff4c; }
+  #estado-badge.desconectado { background: #3b0d0d; color: #ff4c4c; border: 1px solid #ff4c4c; }
+
+  main { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+
+  /* Modo de disparo */
+  .modo-section {
+    background: #1a1a2e;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+  }
+  .modo-section h2 { font-size: 0.85rem; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+  .modo-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+  .modo-btn {
+    flex: 1; min-width: 80px;
+    padding: 10px;
+    border: 2px solid #333;
+    border-radius: 8px;
+    background: #111;
+    color: #aaa;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+  .modo-btn:hover { border-color: #00d4ff; color: #00d4ff; }
+  .modo-btn.activo { border-color: #00d4ff; background: #0a2a3a; color: #00d4ff; }
+  .modo-btn[data-modo="normal"].activo  { border-color: #4477ff; background: #0a0a3a; color: #4477ff; }
+  .modo-btn[data-modo="rapid"].activo   { border-color: #ffa040; background: #2a1500; color: #ffa040; }
+  .modo-btn[data-modo="burst"].activo   { border-color: #cc44ff; background: #1a0030; color: #cc44ff; }
+  .modo-btn[data-modo="off"].activo     { border-color: #555;    background: #1a1a1a; color: #888; }
+
+  /* Grid de perfiles */
+  .perfiles-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .perfiles-header h2 { font-size: 1rem; color: #ccc; }
+  .btn-nuevo {
+    background: #00d4ff22;
+    border: 1px solid #00d4ff;
+    color: #00d4ff;
+    padding: 7px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.2s;
+  }
+  .btn-nuevo:hover { background: #00d4ff44; }
+
+  #lista-perfiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+
+  .tarjeta {
+    background: #1a1a2e;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 16px;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.1s;
+    position: relative;
+  }
+  .tarjeta:hover { border-color: #555; transform: translateY(-2px); }
+  .tarjeta.activo { border-color: #00d4ff; background: #0a1a2e; }
+
+  .tarjeta-nombre {
+    font-size: 1rem;
+    font-weight: bold;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .color-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .tarjeta-vals { font-size: 0.8rem; color: #888; line-height: 1.7; }
+  .tarjeta-vals span { color: #bbb; }
+
+  .tarjeta-acciones {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .btn-accion {
+    flex: 1;
+    padding: 6px;
+    border-radius: 6px;
+    border: 1px solid #333;
+    background: #111;
+    color: #aaa;
+    cursor: pointer;
+    font-size: 0.78rem;
+    transition: all 0.15s;
+  }
+  .btn-accion:hover { border-color: #00d4ff; color: #00d4ff; }
+  .btn-accion.activar:hover { border-color: #4cff4c; color: #4cff4c; }
+  .btn-accion.eliminar:hover { border-color: #ff4c4c; color: #ff4c4c; }
+
+  /* Modal */
+  .overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: #000a;
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .overlay.visible { display: flex; }
+
+  .modal {
+    background: #1a1a2e;
+    border: 1px solid #00d4ff44;
+    border-radius: 12px;
+    padding: 28px;
+    width: 100%;
+    max-width: 420px;
+    margin: 16px;
+  }
+  .modal h2 { font-size: 1.1rem; color: #00d4ff; margin-bottom: 20px; }
+
+  .campo { margin-bottom: 14px; }
+  .campo label { display: block; font-size: 0.8rem; color: #888; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
+  .campo input[type="text"],
+  .campo input[type="number"] {
+    width: 100%;
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 9px 12px;
+    color: #e0e0e0;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .campo input:focus { border-color: #00d4ff; }
+
+  .color-row { display: flex; gap: 10px; align-items: center; }
+  .color-row input[type="number"] { flex: 1; }
+  #preview-color {
+    width: 36px; height: 36px;
+    border-radius: 6px;
+    border: 1px solid #333;
+    flex-shrink: 0;
+  }
+
+  .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
+  .btn-guardar {
+    flex: 1; padding: 10px;
+    background: #00d4ff22;
+    border: 1px solid #00d4ff;
+    color: #00d4ff;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: bold;
+    transition: background 0.2s;
+  }
+  .btn-guardar:hover { background: #00d4ff44; }
+  .btn-cancelar {
+    flex: 1; padding: 10px;
+    background: transparent;
+    border: 1px solid #444;
+    color: #888;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: border-color 0.2s;
+  }
+  .btn-cancelar:hover { border-color: #888; color: #ccc; }
+
+  /* Toast */
+  #toast {
+    position: fixed;
+    bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #1a3a1a;
+    border: 1px solid #4cff4c;
+    color: #4cff4c;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    transition: transform 0.3s;
+    z-index: 200;
+  }
+  #toast.error { background: #3a1a1a; border-color: #ff4c4c; color: #ff4c4c; }
+  #toast.visible { transform: translateX(-50%) translateY(0); }
+
+  .spinner { text-align: center; color: #444; padding: 40px; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>&#9881; Recoil Compensator</h1>
+  <div id="estado-badge" class="desconectado">Desconectado</div>
+</header>
+
+<main>
+  <!-- Modo de disparo -->
+  <div class="modo-section">
+    <h2>Modo de disparo</h2>
+    <div class="modo-btns">
+      <button class="modo-btn" data-modo="normal" onclick="setModo('normal')">Normal</button>
+      <button class="modo-btn" data-modo="rapid"  onclick="setModo('rapid')">Rapid</button>
+      <button class="modo-btn" data-modo="burst"  onclick="setModo('burst')">Burst</button>
+      <button class="modo-btn" data-modo="off"    onclick="setModo('off')">Off</button>
+    </div>
+  </div>
+
+  <!-- Perfiles -->
+  <div class="perfiles-header">
+    <h2>Perfiles</h2>
+    <div style="display:flex;gap:8px">
+      <button class="btn-nuevo" onclick="cargarPerfiles()" style="background:#1a2e1a;border-color:#4cff4c;color:#4cff4c">&#8635; Actualizar</button>
+      <button class="btn-nuevo" onclick="abrirModal(null)">+ Nuevo perfil</button>
+    </div>
+  </div>
+  <div id="lista-perfiles"><div class="spinner">Cargando perfiles...</div></div>
+</main>
+
+<!-- Modal editar/crear -->
+<div class="overlay" id="overlay" onclick="cerrarModalOverlay(event)">
+  <div class="modal">
+    <h2 id="modal-titulo">Nuevo perfil</h2>
+    <div class="campo">
+      <label>Nombre</label>
+      <input type="text" id="f-nombre" placeholder="nombre del arma">
+    </div>
+    <div class="campo">
+      <label>Ajuste X <small style="color:#555">(-20 a 20)</small></label>
+      <input type="number" id="f-ajuste_x" step="1" min="-20" max="20">
+    </div>
+    <div class="campo">
+      <label>Ajuste Y <small style="color:#555">(0 a 30)</small></label>
+      <input type="number" id="f-ajuste_y" step="1" min="0" max="30">
+    </div>
+    <div class="campo">
+      <label>Variación <small style="color:#555">(0.00 a 2.00)</small></label>
+      <input type="number" id="f-variacion" step="0.05" min="0" max="2">
+    </div>
+    <div class="campo">
+      <label>Color LED (R G B)</label>
+      <div class="color-row">
+        <input type="number" id="f-r" placeholder="R" min="0" max="255" oninput="actualizarColor()">
+        <input type="number" id="f-g" placeholder="G" min="0" max="255" oninput="actualizarColor()">
+        <input type="number" id="f-b" placeholder="B" min="0" max="255" oninput="actualizarColor()">
+        <div id="preview-color"></div>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancelar" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn-guardar" onclick="guardarPerfil()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  const BASE = '';  // mismo origen
+  let perfiles = [];
+  let modoActual = '';
+  let editandoNombreOriginal = null;
+
+  // ── Utilidades ──────────────────────────────────────────
+  function toast(msg, error = false) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'visible' + (error ? ' error' : '');
+    setTimeout(() => t.className = '', 2500);
+  }
+
+  function actualizarColor() {
+    const r = parseInt(document.getElementById('f-r').value) || 0;
+    const g = parseInt(document.getElementById('f-g').value) || 0;
+    const b = parseInt(document.getElementById('f-b').value) || 0;
+    document.getElementById('preview-color').style.background = `rgb(${r},${g},${b})`;
+  }
+
+  // ── Estado de conexión ───────────────────────────────────
+  async function verificarEstado() {
+    try {
+      const res = await fetch(`${BASE}/estado`);
+      const data = await res.json();
+      const badge = document.getElementById('estado-badge');
+      badge.textContent = data.estado === 'conectado' ? 'Conectado' : 'Desconectado';
+      badge.className = data.estado === 'conectado' ? 'conectado' : 'desconectado';
+    } catch {
+      const badge = document.getElementById('estado-badge');
+      badge.textContent = 'Sin servidor';
+      badge.className = 'desconectado';
+    }
+  }
+
+  // ── Modo de disparo ──────────────────────────────────────
+  async function cargarModo() {
+    try {
+      const res = await fetch(`${BASE}/comando`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({cmd: 'GET_STATUS'})
+      });
+      const data = await res.json();
+      if (data.modo) actualizarBotonesM(data.modo);
+    } catch {}
+  }
+
+  function actualizarBotonesM(modo) {
+    modoActual = modo;
+    document.querySelectorAll('.modo-btn').forEach(b => {
+      b.classList.toggle('activo', b.dataset.modo === modo);
+    });
+  }
+
+  async function setModo(modo) {
+    try {
+      const res = await fetch(`${BASE}/set-modo`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({modo})
+      });
+      const data = await res.json();
+      if (!data.respuesta.startsWith('ERROR')) {
+        actualizarBotonesM(modo);
+        toast(`Modo: ${modo.toUpperCase()}`);
+      } else {
+        toast(data.respuesta, true);
+      }
+    } catch(e) { toast('Error de conexión', true); }
+  }
+
+  // ── Perfiles ─────────────────────────────────────────────
+  async function cargarPerfiles() {
+    try {
+      const [resPerfiles, resActivo] = await Promise.all([
+        fetch(`${BASE}/listar`),
+        fetch(`${BASE}/activo`)
+      ]);
+      perfiles = await resPerfiles.json();
+      const activo = await resActivo.json();
+      renderPerfiles(activo.nombre);
+    } catch {
+      document.getElementById('lista-perfiles').innerHTML =
+        '<div class="spinner">Error al cargar perfiles</div>';
+    }
+  }
+
+  function renderPerfiles(nombreActivo) {
+    const cont = document.getElementById('lista-perfiles');
+    if (!perfiles.length) {
+      cont.innerHTML = '<div class="spinner">No hay perfiles</div>';
+      return;
+    }
+    cont.innerHTML = perfiles.map(p => {
+      const [r, g, b] = p.color || [255, 255, 255];
+      const esActivo = p.nombre === nombreActivo;
+      return `
+      <div class="tarjeta ${esActivo ? 'activo' : ''}" id="tarjeta-${p.nombre}">
+        <div class="tarjeta-nombre">
+          <span class="color-dot" style="background:rgb(${r},${g},${b})"></span>
+          ${p.nombre}
+          ${esActivo ? '<small style="color:#00d4ff;margin-left:auto;font-size:0.7rem">ACTIVO</small>' : ''}
+        </div>
+        <div class="tarjeta-vals">
+          AjX: <span>${p.ajuste_x}</span> &nbsp;
+          AjY: <span>${p.ajuste_y}</span> &nbsp;
+          Var: <span>${p.variacion.toFixed(2)}</span>
+        </div>
+        <div class="tarjeta-acciones">
+          <button class="btn-accion activar" onclick="activarPerfil('${p.nombre}')">Activar</button>
+          <button class="btn-accion"         onclick="abrirModal('${p.nombre}')">Editar</button>
+          <button class="btn-accion eliminar" onclick="eliminarPerfil('${p.nombre}')">Eliminar</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  async function activarPerfil(nombre) {
+    try {
+      const res = await fetch(`${BASE}/activar`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({nombre})
+      });
+      const data = await res.json();
+      if (!data.respuesta.startsWith('ERROR')) {
+        toast(`Perfil activo: ${nombre}`);
+        cargarPerfiles();
+      } else {
+        toast(data.respuesta, true);
+      }
+    } catch { toast('Error de conexión', true); }
+  }
+
+  async function eliminarPerfil(nombre) {
+    if (!confirm(`¿Eliminar el perfil "${nombre}"?`)) return;
+    try {
+      const res = await fetch(`${BASE}/eliminar`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({nombre})
+      });
+      const data = await res.json();
+      if (!data.respuesta.startsWith('ERROR')) {
+        toast(`Perfil eliminado: ${nombre}`);
+        cargarPerfiles();
+      } else {
+        toast(data.respuesta, true);
+      }
+    } catch { toast('Error de conexión', true); }
+  }
+
+  // ── Modal ─────────────────────────────────────────────────
+  function abrirModal(nombre) {
+    editandoNombreOriginal = nombre;
+    const p = perfiles.find(x => x.nombre === nombre);
+    document.getElementById('modal-titulo').textContent = nombre ? `Editar: ${nombre}` : 'Nuevo perfil';
+    document.getElementById('f-nombre').value      = p ? p.nombre      : '';
+    document.getElementById('f-ajuste_x').value   = p ? p.ajuste_x    : 0;
+    document.getElementById('f-ajuste_y').value   = p ? p.ajuste_y    : 5;
+    document.getElementById('f-variacion').value  = p ? p.variacion   : 0.3;
+    const [r, g, b] = p?.color || [0, 0, 255];
+    document.getElementById('f-r').value = r;
+    document.getElementById('f-g').value = g;
+    document.getElementById('f-b').value = b;
+    actualizarColor();
+    document.getElementById('overlay').classList.add('visible');
+    document.getElementById('f-nombre').focus();
+  }
+
+  function cerrarModal() {
+    document.getElementById('overlay').classList.remove('visible');
+  }
+
+  function cerrarModalOverlay(e) {
+    if (e.target === document.getElementById('overlay')) cerrarModal();
+  }
+
+  async function guardarPerfil() {
+    const nombre    = document.getElementById('f-nombre').value.trim();
+    const ajuste_x  = parseFloat(document.getElementById('f-ajuste_x').value);
+    const ajuste_y  = parseFloat(document.getElementById('f-ajuste_y').value);
+    const variacion = parseFloat(document.getElementById('f-variacion').value);
+    const r = parseInt(document.getElementById('f-r').value) || 0;
+    const g = parseInt(document.getElementById('f-g').value) || 0;
+    const b = parseInt(document.getElementById('f-b').value) || 0;
+
+    if (!nombre) { toast('El nombre es obligatorio', true); return; }
+    if (isNaN(ajuste_x) || isNaN(ajuste_y) || isNaN(variacion)) {
+      toast('Valores numéricos inválidos', true); return;
+    }
+
+    const perfil = { nombre, ajuste_x, ajuste_y, variacion, color: [r, g, b] };
+
+    // Si es edición y el nombre no cambió → sobrescribir
+    if (editandoNombreOriginal) perfil.sobrescribir = true;
+
+    try {
+      const res = await fetch(`${BASE}/guardar`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(perfil)
+      });
+      const data = await res.json();
+      if (!data.respuesta.startsWith('ERROR')) {
+        toast(data.respuesta);
+        cerrarModal();
+        cargarPerfiles();
+      } else {
+        toast(data.respuesta, true);
+      }
+    } catch { toast('Error de conexión', true); }
+  }
+
+  // ── Init ─────────────────────────────────────────────────
+  async function init() {
+    await verificarEstado();
+    await Promise.all([cargarPerfiles(), cargarModo()]);
+    setInterval(verificarEstado, 5000);
+  }
+
+  init();
+</script>
+</body>
+</html>
